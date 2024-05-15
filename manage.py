@@ -20,3 +20,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+    
+# 本番環境での追加する必要のある環境変数
+# DJANGO_SETTINGS_MODULE=your_project.settings.prod
