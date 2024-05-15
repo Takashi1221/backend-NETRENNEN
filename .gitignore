@@ -1,0 +1,6 @@
+__pycache__/
+.env
+awscliv2.zip
+/aws
+horse_list.pkl
+race_list.pkl
