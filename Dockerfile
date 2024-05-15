@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY . .
 
 # Pythonの依存関係をインストール
-RUN pip install --no-cache-dir -r requirements.lock
+RUN pip install --no-cache-dir -r requirements.txt
 
 # アプリケーションがリッスンするポートを示す
 EXPOSE 8000
