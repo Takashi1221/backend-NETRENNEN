@@ -1,5 +1,6 @@
 from .base import *
 from decouple import config, Csv
+import dj_database_url
 
 
 # 環境変数の読み込み
