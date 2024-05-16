@@ -288,7 +288,13 @@ class Command(BaseCommand):
             await browser.close()
             profi_df = pd.concat(profi_dfs.values()).reset_index(drop=True)
             results_df = pd.concat(results_dfs.values()).reset_index(drop=True)
-            pedigree_df = pd.concat(pedigree_dfs.values()).reset_index(drop=True)
+            
+            if pedigree_dfs:
+                pedigree_df = pd.concat(pedigree_dfs.values()).reset_index(drop=True)
+                
+            else:
+                pedigree_df = pd.DataFrame()
+            
         else:
             print("リストが空です")
     
@@ -368,7 +374,7 @@ class Command(BaseCommand):
     async def fetch_race_results_data(self):
         # RaceResultsモデルからデータを非同期で取得
         race_results_data = await sync_to_async(list)(RaceResults.objects.values(
-            'race_horse_id', 'title', 'this_race_nr', 'boden', 'reiter', 'abstand', 'abstand_zeit', 'race_time', 'box'
+            'race_horse_id', 'title', 'this_race_nr', 'boden', 'reiter', 'abstand', 'abstand_zeit', 'passing_order', 'comment', 'race_time', 'box'
         ))
         return race_results_data
             
@@ -384,7 +390,7 @@ class Command(BaseCommand):
 
         # 欠損値あるとMySQLがエラー起こすので前処理
         df_combined = df_combined.where(pd.notnull(df_combined), None)
-        df_combined["abstand_zeit"] = df_combined["abstand_zeit"].astype(float).fillna(1000)
+        df_combined["abstand_zeit"] = df_combined["abstand_zeit"].astype(str).fillna("-.-")
 
         return df_combined
     
@@ -397,6 +403,8 @@ class Command(BaseCommand):
             reiter=row['reiter'],
             abstand=row.get('abstand', None),
             abstand_zeit=row.get('abstand_zeit', None),
+            passing_order=row.get('passing_order', None),
+            comment=row.get('comment', None),
             race_time=row.get('race_time', None),
             date=row['date'],
             box=row.get('box', None),
