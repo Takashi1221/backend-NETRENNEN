@@ -1,3 +1,5 @@
+import os
+import logging
 from django.core.management.base import BaseCommand, CommandError
 from django.db.utils import IntegrityError
 import pandas as pd
@@ -11,8 +13,14 @@ from pyppeteer import launch
 from pyppeteer.errors import TimeoutError
 from asgiref.sync import sync_to_async
 from results.models import HorseResults, RaceResults
-import pickle
 import random
+# import pickle
+
+
+# 環境変数DEBUGを設定
+os.environ['DEBUG'] = 'puppeteer:*'
+# ログの設定
+logging.basicConfig(level=logging.DEBUG, filename='/tmp/pyppeteer.log', filemode='w')
 
 
 class Command(BaseCommand):
@@ -33,7 +41,7 @@ class Command(BaseCommand):
 
     async def scrape(self, existing_ids):
         # ブラウザを起動
-        browser = await launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox'])
+        browser = await launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox'], dumpio=True)
         page = await browser.newPage()
         await page.setViewport({'width': 1920, 'height': 2080})
         
