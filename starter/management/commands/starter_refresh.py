@@ -1,3 +1,5 @@
+import os
+import logging
 from django.core.management.base import BaseCommand, CommandError
 from django.db.utils import IntegrityError
 from django.conf import settings
@@ -8,7 +10,6 @@ import re
 import numpy as np
 from tqdm import tqdm 
 import random
-import logging
 from io import StringIO
 from bs4 import BeautifulSoup
 import asyncio
@@ -16,6 +17,11 @@ from pyppeteer import launch
 from asgiref.sync import sync_to_async
 from starter.models import Renntermine, Starter
 
+
+# 環境変数DEBUGを設定
+os.environ['DEBUG'] = 'puppeteer:*'
+# ログの設定
+logging.basicConfig(level=logging.DEBUG, filename='/tmp/pyppeteer.log', filemode='w')
 
 
 class Command(BaseCommand):
@@ -37,7 +43,7 @@ class Command(BaseCommand):
         starter_dfs = {}
         for raceid in raceids:
             try:
-                browser = await launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox'])
+                browser = await launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-software-rasterizer'], dumpio=True)
                 page = await browser.newPage()
                 await page.setViewport({'width': 1920, 'height': 1080})
                 await page.goto("https://www.deutscher-galopp.de/gr/renntage/rennen.php?id=" + raceid)
@@ -68,9 +74,11 @@ class Command(BaseCommand):
                         starter_dfs[raceid] = df
                     else:
                         logger.error("テーブルが見つかりませんでした。") # 基本的にこのテーブルはあります
+                        
             except Exception as e:
-                logger.error(f"エラーが発生しました: {e}")
-                raise  # この例外を再発生させることで処理を中断
+                logging.error(f'Error during Pyppeteer task: {e}')  # エラーメッセージをログに記録
+                raise
+            
         starter_df = pd.concat(starter_dfs.values()).reset_index(drop=True)
         return starter_df
     

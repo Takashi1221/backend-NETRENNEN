@@ -70,7 +70,7 @@ class CombinedResults(models.Model):
     abstand = models.CharField(max_length=100, blank=True, null=True)
     abstand_zeit = models.FloatField(blank=True, null=True)
     race_time = models.CharField(max_length=100, blank=True, null=True)
-    date = models.DateTimeField()
+    date = models.DateField()
     box = models.CharField(max_length=100, null=True, blank=True)
     ort = models.CharField(max_length=100, null=True, blank=True)
     this_race_nr = models.CharField(max_length=100, null=True, blank=True)
