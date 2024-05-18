@@ -8,6 +8,9 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='localhost', cast=Csv())
 
 
+SENDGRID_API_KEY = config('SENDGRID_API_KEY')
+
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',

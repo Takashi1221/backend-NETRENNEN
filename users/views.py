@@ -6,6 +6,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from .serializers import UserRegistrationSerializer
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 
 # SingUp用
@@ -118,3 +120,30 @@ class UpdateSubscription(APIView):
             return Response({'success': 'Subscription updated successfully'}, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+# コンタクトからのメール転送
+class SendMessageView(APIView):
+    authentication_classes = []
+    permission_classes = []
+    
+    def post(self, request, *args, **kwargs):
+        user_email = request.data.get('email')  # ユーザーのメールアドレス
+        user_message = request.data.get('message')  # ユーザーが入力したメッセージ
+        subject = "Contact Form a User"  # メールの件名
+
+        # メールの作成
+        message = Mail(
+            from_email='t.mio@netrennen.com',  # 認証済みの送信者アドレス
+            to_emails='t.mio@netrennen.com',  # 受信するあなたのメールアドレス
+            subject=subject,
+            plain_text_content=f"From: {user_email}\nMessage: {user_message}"
+        )
+
+        try:
+            sg = SendGridAPIClient(settings.SENDGRID_API_KEY)
+            response = sg.send(message)
+            return Response({'message': 'Email sent successfully'}, status=response.status_code)
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
+    

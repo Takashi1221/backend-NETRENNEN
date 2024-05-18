@@ -9,6 +9,9 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='localhost', cast=Csv())
 
 
+SENDGRID_API_KEY = config('SENDGRID_API_KEY')
+
+
 # 環境変数からデータベースURLを取得
 DATABASE_URL = config('DATABASE_URL')
 
