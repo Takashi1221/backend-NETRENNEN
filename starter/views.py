@@ -21,8 +21,12 @@ class RenntermineViewSet(viewsets.ModelViewSet):
 class KalenderViewSet(viewsets.ModelViewSet):
     queryset = KalenderModel.objects.all()
     serializer_class = KalenderSerializer
+    authentication_classes = []  # 認証を適用しない
+    permission_classes = [AllowAny] 
     
 class PedigreeViewSet(viewsets.ModelViewSet):
+    authentication_classes = []  # 認証を適用しない
+    permission_classes = [AllowAny] 
     serializer_class = PedigreeSerializer
     def get_queryset(self):
         """
@@ -36,6 +40,8 @@ class PedigreeViewSet(viewsets.ModelViewSet):
         return queryset
     
 class HorseProfiViewSet(viewsets.ModelViewSet):
+    authentication_classes = []  # 認証を適用しない
+    permission_classes = [AllowAny] 
     serializer_class = HorseProfiSerializer
     def get_queryset(self):
         """

@@ -81,6 +81,8 @@ class RaceNumberViewSet(viewsets.ModelViewSet):
     
 class HorseEachResultsiViewSet(viewsets.ModelViewSet):
     serializer_class = HorseEachResultsSerializer
+    authentication_classes = []  # 認証を適用しない
+    permission_classes = [AllowAny] 
     def get_queryset(self):
         """
         Optionally restricts the returned purchases to a given user,
