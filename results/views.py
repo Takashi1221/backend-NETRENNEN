@@ -8,17 +8,21 @@ from .serializers import CombinedResultsSerializer, RaceResultsSerializer, RaceN
 
 class CombinedResultsViewSet(viewsets.ModelViewSet):
     serializer_class = CombinedResultsSerializer
+    authentication_classes = []  # 認証を適用しない
+    permission_classes = [AllowAny] 
     def get_queryset(self):
         queryset = CombinedResults.objects.all().order_by('-date')  # 日付で降順に並べ替え
         horse_id = self.request.query_params.get('horse_id')
         if horse_id is not None:
             queryset = queryset.filter(horse_id=horse_id)
 
-        return queryset[:2]
+        return queryset[:4]
     
     
 class RaceResultsViewSet(viewsets.ModelViewSet):
     serializer_class = RaceResultsSerializer
+    authentication_classes = []  # 認証を適用しない
+    permission_classes = [AllowAny] 
     def get_queryset(self):
         queryset = RaceResults.objects.all()
         race_id = self.request.query_params.get('race_id')

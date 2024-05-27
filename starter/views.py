@@ -9,6 +9,15 @@ class StarterViewSet(viewsets.ModelViewSet):
     authentication_classes = []  # 認証を適用しない
     permission_classes = [AllowAny] 
     
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        race_id = self.request.query_params.get('race_id')
+        
+        if race_id:
+            queryset = queryset.filter(race_id=race_id)
+        
+        return queryset
+    
     
     
 class RenntermineViewSet(viewsets.ModelViewSet):
@@ -16,6 +25,16 @@ class RenntermineViewSet(viewsets.ModelViewSet):
     serializer_class = RenntermineSerializer
     authentication_classes = []  # 認証を適用しない
     permission_classes = [AllowAny] 
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        day = self.request.query_params.get('day')
+        location = self.request.query_params.get('location')
+        
+        if day and location:
+            queryset = queryset.filter(date=day, location=location)
+        
+        return queryset
     
     
 class KalenderViewSet(viewsets.ModelViewSet):
