@@ -22,12 +22,11 @@ class CustomUserManager(UserManager):
 class CustomUser(AbstractUser):
     username = None
     email = models.EmailField('email address', unique=True)
-    nickname = models.CharField(max_length=50)  # 必須フィールド
+    country = models.CharField(max_length=50)
     is_subscribed = models.BooleanField(default=False) # True/False
-    age_group = models.CharField(max_length=50)  # 必須フィールド  # young/adult/senior
-    residence_area = models.CharField(max_length=50)  # 必須フィールド
+    nickname = models.CharField(max_length=50, blank=True, null=True)
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['nickname', 'age_group', 'residence_area']  # 必須フィールドリストに追加
+    REQUIRED_FIELDS = ['country']  # 必須フィールドリストに追加
 
     objects = CustomUserManager()
