@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Starter, Renntermine, KalenderModel, HorsePedigree, HorseProfi
+from .models import Starter, Renntermine, KalenderModel, HorsePedigree, HorseProfi, TodayErgebnis, TodayOdds
 
 class StarterSerializer(serializers.ModelSerializer):
     class Meta:
@@ -24,4 +24,14 @@ class PedigreeSerializer(serializers.ModelSerializer):
 class HorseProfiSerializer(serializers.ModelSerializer):
     class Meta:
         model = HorseProfi
+        fields = '__all__'
+        
+class TodayErgebnisSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TodayErgebnis
+        fields = '__all__'
+        
+class TodayOddsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TodayOdds
         fields = '__all__'

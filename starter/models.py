@@ -109,3 +109,25 @@ class KalenderModel(models.Model):
         verbose_name = "重賞日程"
         verbose_name_plural = "重賞日程"
         db_table = 'rennkalender'
+        
+
+class TodayErgebnis(models.Model):
+    race_id = models.CharField(max_length=255)
+    platz = models.CharField(max_length=255)
+    quote = models.CharField(max_length=255)
+    horse_id = models.CharField(max_length=255)
+    
+    class Meta:
+        verbose_name = "当日レース結果"
+        verbose_name_plural = "当日レース結果"
+        db_table = 'TodayErgebnis'
+        
+class TodayOdds(models.Model):
+    race_id = models.CharField(max_length=255)
+    quote = models.CharField(max_length=255)
+    horse_id = models.CharField(max_length=255)
+    
+    class Meta:
+        verbose_name = "当日オッズ"
+        verbose_name_plural = "当日オッズ"
+        db_table = 'TodayOdds'

@@ -1,7 +1,7 @@
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny
-from .models import Starter, Renntermine, KalenderModel, HorsePedigree, HorseProfi
-from .serializers import StarterSerializer, RenntermineSerializer, KalenderSerializer, PedigreeSerializer, HorseProfiSerializer
+from .models import Starter, Renntermine, KalenderModel, HorsePedigree, HorseProfi, TodayErgebnis, TodayOdds
+from .serializers import StarterSerializer, RenntermineSerializer, KalenderSerializer, PedigreeSerializer, HorseProfiSerializer, TodayErgebnisSerializer, TodayOddsSerializer
 
 class StarterViewSet(viewsets.ModelViewSet):
     queryset = Starter.objects.all()
@@ -71,4 +71,33 @@ class HorseProfiViewSet(viewsets.ModelViewSet):
         horse_id = self.request.query_params.get('horse_id')
         if horse_id is not None:
             queryset = queryset.filter(horse_id=horse_id)
+        return queryset
+    
+    
+class TodayErgebnisViewSet(viewsets.ModelViewSet):
+    queryset = TodayErgebnis.objects.all()
+    serializer_class = TodayErgebnisSerializer
+    authentication_classes = []  # 認証を適用しない
+    permission_classes = [AllowAny] 
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        race_id = self.request.query_params.get('race_id')
+        if race_id:
+            queryset = queryset.filter(race_id=race_id)
+        
+        return queryset
+    
+class TodayOddsViewSet(viewsets.ModelViewSet):
+    queryset = TodayOdds.objects.all()
+    serializer_class = TodayOddsSerializer
+    authentication_classes = []  # 認証を適用しない
+    permission_classes = [AllowAny] 
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        race_id = self.request.query_params.get('race_id')
+        if race_id:
+            queryset = queryset.filter(race_id=race_id)
+        
         return queryset
