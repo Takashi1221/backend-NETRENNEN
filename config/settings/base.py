@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "results",
     "users",
     "news",
+    "payment",
 ]
 
 

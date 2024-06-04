@@ -146,4 +146,6 @@ class SendMessageView(APIView):
             return Response({'message': 'Email sent successfully'}, status=response.status_code)
         except Exception as e:
             return Response({'error': str(e)}, status=400)
+        
+        
     
