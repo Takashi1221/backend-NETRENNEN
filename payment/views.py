@@ -1,7 +1,8 @@
 import json
 from django.contrib.auth import get_user_model
 from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from django.contrib.auth.decorators import login_required
 from decouple import config, Csv
 import stripe
 
@@ -25,20 +26,31 @@ def stripe_webhooks(request):
         return HttpResponse(status=400)
 
     # Handle the event
-    if event.type == 'payment_intent.succeeded':
-        print("Stripe決済されました！！！")
-        payment_intent = event.data.object # contains a stripe.PaymentIntent
-        # Then define and call a method to handle the successful payment intent.
-        # handle_payment_intent_succeeded(payment_intent)
+    if event.type == 'checkout.session.completed':
+        session = event.data.object
+        customer_email = session.get('customer_email')
+        subscription_id = session.get('subscription')
         
-    elif event.type == 'invoice.payment_succeeded':
-        print(event.data.object.customer_email)
-        User = get_user_model()
-        user = User.objects.get(email=event.data.object.customer_email)
-        user.is_subscribed = True
-        user.save()
+        if customer_email:
+            try:
+                User = get_user_model()
+                user = User.objects.get(email=customer_email)
+                user.is_subscribed = True
+                user.subscription_id = subscription_id
+                user.save()
+                print(f"User {user.email} subscription updated successfully.")
+            except User.DoesNotExist:
+                print(f"User with email {customer_email} does not exist.")
+
         
     elif event.type == 'customer.subscription.deleted':
+        session = event.data.object
+        subscription_id = session.get('subscription')
+        User = get_user_model()
+        user = User.objects.get(subscription_id=subscription_id)
+        user.is_subscribed = False
+        user.subscription_id = ''
+        user.save()
         print("サブスクが解約されました！！！")
         
     # ... handle other event types

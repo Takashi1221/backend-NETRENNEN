@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
 from .serializers import UserRegistrationSerializer
+from .authentication import CustomJWTAuthentication
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
@@ -148,4 +149,29 @@ class SendMessageView(APIView):
             return Response({'error': str(e)}, status=400)
         
         
+class GetUserEmail(APIView):
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """
+        ログインユーザーのEmailを返すAPIエンドポイント。
+        """
+        user = request.user
+        print(user.email)
+        return Response({'email': user.email})
     
+class IsSubscribed(APIView):
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """
+        ログインユーザーのis_subscribedを返すAPIエンドポイント。
+        """
+        user = request.user
+        print(user.is_subscribed, user.subscription_id)
+        return Response({
+            'is_subscribed': user.is_subscribed,
+            'subscription_id': user.subscription_id  
+        })

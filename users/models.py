@@ -24,7 +24,7 @@ class CustomUser(AbstractUser):
     email = models.EmailField('email address', unique=True)
     country = models.CharField(max_length=50)
     is_subscribed = models.BooleanField(default=False) # True/False
-    stripe_email = models.CharField(max_length=50, blank=True, null=True)
+    subscription_id = models.CharField(max_length=255, null=True, blank=True)
     nickname = models.CharField(max_length=50, blank=True, null=True)
 
     USERNAME_FIELD = 'email'
