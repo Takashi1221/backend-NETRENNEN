@@ -93,6 +93,7 @@ class LogoutView(APIView):
 
 # 認証状態の管理
 class CheckAuthView(APIView):
+    authentication_classes = [CustomJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -100,27 +101,6 @@ class CheckAuthView(APIView):
         return Response({
             'is_authenticated': request.user.is_authenticated
         })
-        
-
-# 課金状態の管理
-class UpdateSubscription(APIView):
-    # 認証やパーミッションは必要に応じて設定
-    authentication_classes = []
-    permission_classes = []
-
-    def post(self, request, *args, **kwargs):
-        email = request.data.get('email')
-        if not email:
-            return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        User = get_user_model()
-        try:
-            user = User.objects.get(email=email)
-            user.is_subscribed = True
-            user.save()
-            return Response({'success': 'Subscription updated successfully'}, status=status.HTTP_200_OK)
-        except User.DoesNotExist:
-            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
 # コンタクトからのメール転送

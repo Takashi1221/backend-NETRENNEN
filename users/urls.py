@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import UserRegistrationView, LoginView, RefreshView, LogoutView, CheckAuthView, UpdateSubscription, SendMessageView, GetUserEmail, IsSubscribed
+from .views import UserRegistrationView, LoginView, RefreshView, LogoutView, CheckAuthView, SendMessageView, GetUserEmail, IsSubscribed
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
@@ -10,7 +10,6 @@ urlpatterns = [
     path('refresh/', RefreshView.as_view()),
     path('logout/', LogoutView.as_view()),
     path('checkauth/', CheckAuthView.as_view()),
-    path('update_subscription/', UpdateSubscription.as_view(), name='update_subscription'),
     path('send-message/', SendMessageView.as_view(), name='send-message'),
     path('checkemail/', GetUserEmail.as_view(), name='check_email'),
     path('abocheck/', IsSubscribed.as_view(), name='abocheck'),
