@@ -15,12 +15,16 @@ from bs4 import BeautifulSoup
 import asyncio
 from pyppeteer import launch
 from asgiref.sync import sync_to_async
+from decouple import config, Csv
 from starter.models import Renntermine, Starter, HorseProfi, HorsePedigree
 from results.models import HorseResults, RaceResults, CombinedResults
 
 
+
 # 環境変数DEBUGを設定
 os.environ['DEBUG'] = 'puppeteer:*'
+# 環境変数の読み込み
+dg_key = config('DG_KEY')
 # ログの設定
 logging.basicConfig(level=logging.DEBUG, filename='/tmp/pyppeteer.log', filemode='w')
 
@@ -37,17 +41,12 @@ class Command(BaseCommand):
         browser = await launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-software-rasterizer'], dumpio=True)
         page = await browser.newPage()
         await page.setViewport({'width': 1920, 'height': 1080})
-        await page.goto('https://www.deutscher-galopp.de')
+        await page.goto('https://www.deutscher-galopp.de/gr/renntage/rennkalender.php')
         await self.wait_randomly(1, 5)
         
-        first_elements = await page.xpath('//*[@id="container_1b55c231329b2be55f0183af795f3e19_1"]/div[2]/a')  # MehrAnzeigenボタン
-        if first_elements:
-            await first_elements[0].click()
-            await page.waitForNavigation()  # ページ遷移を待つ
-        
-        second_elements = await page.xpath('//*[@id="suchergebnis"]/div[2]/div[2]')  # TableViewボタン
-        if second_elements:
-            await second_elements[0].click()
+        table_view_div = await page.xpath('//*[@id="suchergebnis"]/div[2]/div[2]')  # TableViewボタン
+        if table_view_div:
+            await table_view_div[0].click()
             table_html = await page.evaluate(  # 直近開催日のTableHTMLを取得
                 '''() => {
                     const table = document.querySelector('#racesTable');
@@ -115,6 +114,22 @@ class Command(BaseCommand):
                         df = df.drop(df.index[-1])  # 余分な行があるので落とす
                         df["raceid"] = raceid
                         
+                        # 余分な文字列を処理していく
+                        equipment_list = ['Skl.', 'Sb.', 'O.', 'Zb.']
+                        def extract_equipment(name):
+                            equipment_pattern = '|'.join(map(re.escape, equipment_list))
+                            equipment_found = re.findall(equipment_pattern, name)
+                            name_without_equipment = re.sub(equipment_pattern, '', name).strip()
+                            return pd.Series([name_without_equipment, ' '.join(equipment_found)])
+                        df[['Name', 'Equipment']] = df['Name'].apply(extract_equipment)
+                        
+                        def split_gew_erlaubnise(gew):
+                            parts = re.split(r'kg', gew)
+                            gew_value = parts[0].strip().replace(' ', '')
+                            erlaubnise_value = parts[1].strip() if len(parts) > 1 else ''
+                            return pd.Series([gew_value, erlaubnise_value])
+                        df[['Gew.', 'Erlaubnise']] = df['Gew.'].apply(split_gew_erlaubnise)
+                        
                         soup = BeautifulSoup(table_html, 'html.parser')
                         a_tags = soup.select('table#nennungen a')
                         id_regex = re.compile(r'/pferd/(\d+)/')
@@ -144,20 +159,36 @@ class Command(BaseCommand):
         await page.setViewport({'width': 1920, 'height': 1080})
         
         # ログインするページにアクセス
-        await page.goto('https://www.deutscher-galopp.de/')
+        await page.goto('https://www.deutscher-galopp.de')
         await self.wait_randomly(1, 5)
-        # ログインモーダルを表示させるボタンをクリック
-        await page.click('#blockTopInner > div:nth-child(2)')
-        await self.wait_randomly(1, 3)
-        # ログイン情報を入力
-        await page.type('input[name="benutzername"]', 'miolla21')
-        await page.type('input[name="passwort"]', 'rupan3939')
-        login_button_selector = 'div.greenButton.loginActionButton'
-        await page.waitForSelector(login_button_selector, {'visible': True})
-        await page.click(login_button_selector)
-        await page.waitForNavigation({'waitUntil': 'networkidle0'})
         
-        # ログイン後のページに移動するまで待機（適切なセレクタがあればそれをwaitForSelectorに使う）
+        try:
+            # Cookie承諾画面があれば処理
+            await page.waitForSelector('#cookieNoticeDeclineCloser', {'visible': True, 'timeout': 5000})
+            await page.click('#cookieNoticeDeclineCloser')
+            await self.wait_randomly(3, 5)
+        except Exception as e:
+            logger.error(f"エラーが発生しました: {e}")
+            
+        # ログインモーダルを表示させるボタンをクリック
+        try:
+            login_button_xpath = '/html/body/div[1]/div/div[4]/div[1]/div/div[1]/div/div[2]'
+            await page.waitForXPath(login_button_xpath, {'visible': True, 'timeout': 5000})
+            login_button_element = await page.xpath(login_button_xpath)
+            if login_button_element:
+                await login_button_element[0].click()
+            print('First login button clicked.')
+            await page.type('input[name="benutzername"]', 'miolla21')
+            await page.type('input[name="passwort"]', dg_key)
+            await page.screenshot({'path': 'before_click.png'})
+            
+            await page.waitForSelector('.greenButton.loginActionButton', {'visible': True, 'timeout': 5000})
+            await page.click('.greenButton.loginActionButton')
+            await self.wait_randomly(1, 3)
+            print('Second login button clicked.')
+        except Exception as e:
+            logger.error(f"エラーが発生しました: {e}")
+
         profi_dfs = {}
         results_dfs = {}
         pedigree_dfs = {}
@@ -451,6 +482,7 @@ class Command(BaseCommand):
             await sync_to_async(Starter.objects.create, thread_sensitive=True)(
             number=row['Nr.'],
             name=row['Name'],
+            equip=row['Equipment'],
             gag=row['GAG'],
             box=box_value,  # 取得した値（またはデフォルト値）を使用,
             alter=row['Alter'],
@@ -458,6 +490,7 @@ class Command(BaseCommand):
             trainer=row['Trainer'],
             jocky=row['Reiter'],
             gew=row['Gew.'],
+            erlbnis=row['Erlaubnise'],
             race_id=row['raceid'],
             horse_id=row['horse_id']
             )

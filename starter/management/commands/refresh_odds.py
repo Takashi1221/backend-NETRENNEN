@@ -44,6 +44,17 @@ class Command(BaseCommand):
         page = await browser.newPage()
         await page.setViewport({'width': 1920, 'height': 1080})
         
+        # Cookie承諾画面を処理
+        await page.goto('https://www.deutscher-galopp.de')
+        await self.wait_randomly(1, 5)
+        
+        try:
+            await page.waitForSelector('#cookieNoticeDeclineCloser', {'visible': True, 'timeout': 5000})
+            await page.click('#cookieNoticeDeclineCloser')
+            await self.wait_randomly(3, 5)
+        except Exception as e:
+            print('cookie notice not found')
+        
         for race_id in race_ids:
             await page.goto('https://www.deutscher-galopp.de/gr/renntage/rennen.php?id=' + race_id)
             await asyncio.sleep(3)

@@ -21,6 +21,7 @@ class Renntermine(models.Model):
 class Starter(models.Model):
     number = models.CharField(max_length=5,verbose_name="馬番")
     name = models.CharField(max_length=40, verbose_name="馬名")
+    equip = models.CharField(blank=True, null=True, max_length=40, verbose_name="馬具")
     gag = models.CharField(max_length=10,verbose_name="GAG")
     box = models.CharField(max_length=5, verbose_name="枠番")
     alter = models.CharField(max_length=3,verbose_name="馬齢")
@@ -28,6 +29,7 @@ class Starter(models.Model):
     trainer = models.CharField(max_length=50,verbose_name="トレーナー")
     jocky = models.CharField(max_length=50,verbose_name="ジョッキー")
     gew = models.CharField(max_length=30,verbose_name="斤量")
+    erlbnis = models.CharField(blank=True, null=True, max_length=30,verbose_name="減量")
     race_id = models.CharField(max_length=20, verbose_name="レースID")
     horse_id = models.CharField(max_length=20, verbose_name="馬ID")
     

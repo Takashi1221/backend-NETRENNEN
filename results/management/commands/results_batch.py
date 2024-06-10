@@ -10,15 +10,17 @@ from bs4 import BeautifulSoup
 from io import StringIO
 import asyncio
 from pyppeteer import launch
-from pyppeteer.errors import TimeoutError
 from asgiref.sync import sync_to_async
 from results.models import HorseResults, RaceResults
 import random
-# import pickle
+from decouple import config, Csv
 
 
 # 環境変数DEBUGを設定
 os.environ['DEBUG'] = 'puppeteer:*'
+# 環境変数の読み込み
+dg_key = config('DG_KEY')
+print(dg_key)
 # ログの設定
 logging.basicConfig(level=logging.DEBUG, filename='/tmp/pyppeteer.log', filemode='w')
 
@@ -48,20 +50,37 @@ class Command(BaseCommand):
             await page.setViewport({'width': 1920, 'height': 2080})
             
             # ログインするページにアクセス
-            await page.goto('https://www.deutscher-galopp.de/')
+            await page.goto('https://www.deutscher-galopp.de')
             await self.random_sleep()
-            # ログインモーダルを表示させるボタンをクリック
-            await page.click('#blockTopInner > div:nth-child(2)')
-            await asyncio.sleep(1) 
-            # ログイン情報を入力
-            await page.type('input[name="benutzername"]', 'miolla21')
-            await page.type('input[name="passwort"]', 'rupan3939')
-            login_button_selector = 'div.greenButton.loginActionButton'
-            await page.waitForSelector(login_button_selector, {'visible': True})
-            await page.click(login_button_selector)
-            await page.waitForNavigation({'waitUntil': 'networkidle0'})
             
-            # ログイン後Ergebnisseへ
+            try:
+                # Cookie承諾画面があれば処理
+                await page.waitForSelector('#cookieNoticeDeclineCloser', {'visible': True, 'timeout': 5000})
+                await page.click('#cookieNoticeDeclineCloser')
+                await asyncio.sleep(5)
+            except Exception as e:
+                print(f"エラーが発生しました: {e}")
+                
+            # ログインモーダルを表示させるボタンをクリック
+            try:
+                login_button_xpath = '/html/body/div[1]/div/div[4]/div[1]/div/div[1]/div/div[2]'
+                await page.waitForXPath(login_button_xpath, {'visible': True, 'timeout': 5000})
+                login_button_element = await page.xpath(login_button_xpath)
+                if login_button_element:
+                    await login_button_element[0].click()
+                print('First login button clicked.')
+                await page.type('input[name="benutzername"]', 'miolla21')
+                await page.type('input[name="passwort"]', dg_key)
+                await page.screenshot({'path': 'before_click.png'})
+                
+                await page.waitForSelector('.greenButton.loginActionButton', {'visible': True, 'timeout': 5000})
+                await page.click('.greenButton.loginActionButton')
+                await self.random_sleep()
+                print('Second login button clicked.')
+            except Exception as e:
+                print(f"エラーが発生しました: {e}")
+            
+            # Ergebnisseへ
             await page.goto('https://www.deutscher-galopp.de/gr/renntage/ergebnisse/')
             # アコーディオンヘッダー要素を全て取得
             accordion_headers = await page.querySelectorAll('.accordionHeader')
@@ -91,8 +110,6 @@ class Command(BaseCommand):
 
             unique_races = list(set(race_ids))
             race_id_list = [race_id for race_id in unique_races if race_id not in existing_ids]
-            print(race_id_list)
-            print(len(race_id_list))
             
             if race_id_list:
                 dfs={}

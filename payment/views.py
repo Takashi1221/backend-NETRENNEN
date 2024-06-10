@@ -51,7 +51,6 @@ def stripe_webhooks(request):
         user.is_subscribed = False
         user.subscription_id = ''
         user.save()
-        print("サブスクが解約されました！！！")
         
     # ... handle other event types
     else:
