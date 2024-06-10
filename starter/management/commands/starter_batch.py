@@ -89,7 +89,7 @@ class Command(BaseCommand):
 
     async def starter(self, urls, raceids):
         starter_dfs = {}
-        for url, raceid in zip(urls, raceids):
+        for url, raceid in zip(urls[:5], raceids[:5]):
             try:
                 browser = await launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-software-rasterizer'], dumpio=True)
                 page = await browser.newPage()
@@ -177,15 +177,13 @@ class Command(BaseCommand):
             login_button_element = await page.xpath(login_button_xpath)
             if login_button_element:
                 await login_button_element[0].click()
-            print('First login button clicked.')
+
             await page.type('input[name="benutzername"]', 'miolla21')
             await page.type('input[name="passwort"]', dg_key)
-            await page.screenshot({'path': 'before_click.png'})
-            
             await page.waitForSelector('.greenButton.loginActionButton', {'visible': True, 'timeout': 5000})
             await page.click('.greenButton.loginActionButton')
             await self.wait_randomly(1, 3)
-            print('Second login button clicked.')
+
         except Exception as e:
             logger.error(f"エラーが発生しました: {e}")
 
@@ -505,16 +503,6 @@ class Command(BaseCommand):
                                        
     
     def handle(self, *args, **options):
-        # asyncio.run() で非同期処理を同期的に実行
+        # Execute synchronous operations asynchronously
         asyncio.run(self.main())
 
- 
-    
-    
-'''
-上記のコードは、pyppeteerを使用しているスクリプトでRuntimeError: Event loop is closedというエラーが発生しないようにするための提案です。
-この方法は、イベントループの扱いを改善し、pyppeteerとの互換性を高めることを目的としています。
-asyncio.get_event_loop()を使用して既存のイベントループを取得する
-この方法では、asyncio.run()の代わりにasyncio.get_event_loop()を使用して既存のイベントループを取得し、
-run_until_complete()メソッドを使ってメインの非同期関数を実行します。この方法は、イベントループの管理をより明示的に行い、エラーを回過するのに役立ちます。
-'''

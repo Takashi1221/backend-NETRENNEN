@@ -16,12 +16,12 @@ import random
 from decouple import config, Csv
 
 
-# 環境変数DEBUGを設定
+# DEBUG setting
 os.environ['DEBUG'] = 'puppeteer:*'
-# 環境変数の読み込み
+# Load env.
 dg_key = config('DG_KEY')
 print(dg_key)
-# ログの設定
+# logging setting
 logging.basicConfig(level=logging.DEBUG, filename='/tmp/pyppeteer.log', filemode='w')
 
 
@@ -29,13 +29,13 @@ class Command(BaseCommand):
     help = 'Scrape race results and update database'
     
     async def random_sleep(self):
-        # 1秒から4秒のランダムな時間を生成
+        # creat random time
         sleep_time = random.uniform(1, 4)
         await asyncio.sleep(sleep_time)
     
 
     async def get_existing_race_ids(self):
-        # まだデータベースに存在しないrace_idだけを抽出
+        # Extract only race_ids not in the DB.
         existing_ids = await sync_to_async(set)(RaceResults.objects.values_list('race_id', flat=True))
         
         return existing_ids
@@ -44,24 +44,24 @@ class Command(BaseCommand):
     async def scrape(self, existing_ids):
         
         try:
-            # ブラウザを起動
+            # Launch the browser
             browser = await launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-software-rasterizer'], dumpio=True)
             page = await browser.newPage()
             await page.setViewport({'width': 1920, 'height': 2080})
             
-            # ログインするページにアクセス
+            # Navigate to the login page
             await page.goto('https://www.deutscher-galopp.de')
             await self.random_sleep()
             
             try:
-                # Cookie承諾画面があれば処理
+                # Handle cookie consent if present
                 await page.waitForSelector('#cookieNoticeDeclineCloser', {'visible': True, 'timeout': 5000})
                 await page.click('#cookieNoticeDeclineCloser')
                 await asyncio.sleep(5)
             except Exception as e:
                 print(f"エラーが発生しました: {e}")
                 
-            # ログインモーダルを表示させるボタンをクリック
+            # Click the button to show the login modal
             try:
                 login_button_xpath = '/html/body/div[1]/div/div[4]/div[1]/div/div[1]/div/div[2]'
                 await page.waitForXPath(login_button_xpath, {'visible': True, 'timeout': 5000})
@@ -80,23 +80,23 @@ class Command(BaseCommand):
             except Exception as e:
                 print(f"エラーが発生しました: {e}")
             
-            # Ergebnisseへ
+            # Go to Ergebnisse
             await page.goto('https://www.deutscher-galopp.de/gr/renntage/ergebnisse/')
-            # アコーディオンヘッダー要素を全て取得
+            # Retrieve all accordion header elements
             accordion_headers = await page.querySelectorAll('.accordionHeader')
             
-            # 各アコーディオンヘッダーをクリック
+            # Click each accordion header
             race_ids = [] 
             for header in accordion_headers[:5]:
                 await self.random_sleep()
                 await header.click()
-                # "accordionContent" クラスで display: block の要素を取得
+                # Get elements with the class "accordionContent" that have display: block
                 accordion_contents = await page.querySelectorAll('.accordionContent')
                 
                 for content in accordion_contents[:5]:
                     display = await page.evaluate('(element) => getComputedStyle(element).display', content)
                     if display == 'block':
-                        # "accordionElementOuter" 要素内のすべてのhref属性を取得
+                        # Get all href attributes within the "#accordionElementOuter" element
                         hrefs = await page.evaluate('''
                             (content) => Array.from(content.querySelectorAll('a')).map(a => a.href)
                         ''', content)
@@ -133,16 +133,16 @@ class Command(BaseCommand):
                                 date_str, time_str = input_str.split(", ")
                             else:
                                 date_str = input_str
-                                time_str = None  # 時間がない場合はNoneを代入
+                                time_str = None
                                 
                         race_nr_element = await page.xpath('//*[@id="Stammdaten"]/div/div[1]/div[1]/span[2]')
-                        if race_nr_element:  # 当レースのレース番号を取得
+                        if race_nr_element:  # Retrieve this race's number
                             race_nr_text = await page.evaluate('(race_nr_element) => race_nr_element.textContent', race_nr_element[0])
                         
                         for i in range(1, 5):
-                            # XPathを使用して特定のspan要素を取得
+                            # Retrieve a specific span element
                             span_element = await page.xpath(f'//*[@id="accordionAusschreibung"]/h3/div[2]/span[{i}]')
-                            if span_element:  # span_elementが空でない場合（要素が存在する場合）
+                            if span_element:
                                 text = await page.evaluate('(element) => element.textContent', span_element[0])
                                 if i == 1:
                                     kategorie = text
@@ -158,10 +158,10 @@ class Command(BaseCommand):
                                 elif i == 4:
                                     boden = "-"
                             
-                        # DFの作成
+                        # creat Dataframe
                         page_content = await page.content()
                         df = pd.DataFrame()
-                        table_html = await page.evaluate(  # TableHTMLを取得
+                        table_html = await page.evaluate( 
                             '''() => {
                                 const table = document.querySelector('#ergebnis');
                                 return table ? table.outerHTML : null;
@@ -175,15 +175,14 @@ class Command(BaseCommand):
                                 other_text = df['Name'].iloc[-1]
                                 df = df.drop(df.index[-1])
                                 
-                                # 決着タイムと配当列を作成
+                                # Create columns for race-time and return-money
                                 split_zeit_text = other_text.split("ZEIT DES RENNENS:")
                                 if len(split_zeit_text) > 1:
                                     race_time = split_zeit_text[1].split()[0]
                                     df["race_time_origin"] = race_time
                                     
-                                    # 決着タイムを秒数に直す
+                                    # Convert "race_time_origin" to seconds
                                     def convert_to_seconds(time_str):
-                                        # コロンとカンマを基に分割
                                         minutes, seconds = time_str.split(':')
                                         seconds, fraction = seconds.split(',')
                                         total_seconds = int(minutes) * 60 + int(seconds) + float(f'0.{fraction}')
@@ -208,8 +207,8 @@ class Command(BaseCommand):
                                                 if i < len(split_platz):
                                                     df.loc[i, 'hit_platz'] = float(split_platz[i].replace(",", "."))
                                                 else:
-                                                    df.loc[i, 'hit_platz'] = 0  # 複勝圏外は0を代入
-                                        else: # 複勝がないレースな場合
+                                                    df.loc[i, 'hit_platz'] = 0 
+                                        else: 
                                             df["pay_platz"] = "-"
                                             df['hit_platz'] = 0.0
                                         if zweierwette:
@@ -236,10 +235,10 @@ class Command(BaseCommand):
                                     df["pay_zweier"] = "-"
                                     df["pay_dreier"] = "-"
                                 
-                                # 着差を数値化
+                                # Convert margin to a number
                                 def fraction_to_decimal(x):
                                     if pd.isnull(x):
-                                        return x  # NaN はそのまま返す
+                                        return x  # NaN
                                     try:
                                         if ' ' in x:
                                             whole, fraction = x.split(' ')
@@ -248,15 +247,15 @@ class Command(BaseCommand):
                                         elif '/' in x:
                                             numerator, denominator = map(int, x.split('/'))
                                             return numerator / denominator
-                                        return x  # 数値でない行や整数はそのまま返す
+                                        return x  # Return non-numeric rows or integers as they are
                                     except (ValueError, AttributeError):
-                                        return x  # 変換できない値はそのまま返す
+                                        return x  # Return unconvertible values as they are
                                     
                                 if df["Abstand"].notna().any():
                                     replace_rules = {"kurzer ": "", "Hals": "1/4", "Kopf": "0", "Nase": "0", " Längen": "", " Länge": ""}
                                     df["abstand_rechnung"] = df["Abstand"].replace(replace_rules, regex=True).apply(fraction_to_decimal)
                                     df["abstand_rechnung"] = pd.to_numeric(df["abstand_rechnung"], errors='coerce')*0.2
-                                    cumulative_sums = [0] * len(df)   # 必要なリストを作成
+                                    cumulative_sums = [0] * len(df) 
                                     for i in range(len(df)):
                                         if i == 0:
                                             cumulative_sums[i] = df.loc[i, "abstand_rechnung"] if pd.notna(df.loc[i, "abstand_rechnung"]) else 0
@@ -269,11 +268,10 @@ class Command(BaseCommand):
                                     df["abstand_zeit"] = df["abstand_zeit"].round(1)
                                     df.at[0, "abstand_zeit"] = -df.loc[1, "abstand_zeit"]
                                     
-                                    # レースタイムが無い場合があるのでエラー対策
+                                    # Race-time may be missing
                                     try:
-                                        # 全馬のレースタイムを作成
                                         df["race_time_second_added"] = df["race_time_second"] + df["abstand_zeit"]
-                                        # １着のレコードを上書き
+                                        # Overwrite the record for 1st place
                                         df.loc[0, "race_time_second_added"] = df.loc[0, "race_time_second"] + 0
                                         
                                         def seconds_to_german_time_format(total_seconds):
@@ -281,9 +279,8 @@ class Command(BaseCommand):
                                             remaining_seconds = total_seconds % 60
                                             seconds = int(remaining_seconds)
                                             fraction = remaining_seconds - seconds
-                                            # 小数部分をドイツ式フォーマット（カンマ後に数字二桁）に変換
+                                            # Create a string in German time format
                                             fraction_str = f"{fraction:.2f}".split('.')[1]
-                                            # 最終的なドイツ式タイムフォーマットの文字列を作成
                                             german_time_format = f"{minutes}:{seconds:02},{fraction_str}"
                                             return german_time_format
                                         
@@ -295,13 +292,13 @@ class Command(BaseCommand):
                                     df['abstand_zeit'] = df['abstand_zeit'].apply(lambda x: f"{x:.1f}")
                                     
                                 else:
-                                    # "Abstand"カラムが全て空の場合の処理
+                                    # if the "Abstand" column is entirely empty
                                     df["abstand_zeit"] = "-.-"
                                     df["race_time"] = "-:--,--"
                                     
                                 df["abstand_zeit"] = df["abstand_zeit"].astype(str).fillna("-.-")
                                 
-                                # horse_idを取得
+                                # Get horse_id
                                 soup = BeautifulSoup(table_html, 'html.parser')
                                 a_tags = soup.select('table#ergebnis a')
                                 id_regex = re.compile(r'/pferd/(\d+)/')
@@ -310,7 +307,7 @@ class Command(BaseCommand):
                                 df["race_id"] = race_id
                                 df["race_horse_id"] = df["race_id"] + df["horse_id"]
                                 
-                                # その他必要な列を整備
+                                # Prepare other necessary columns
                                 df["platz"] = df["Pl."].str.replace('.', '', regex=False)
                                 df["gew"] = df["Gew."].str.replace('kg', '', regex=False)
                                 try:
@@ -343,13 +340,11 @@ class Command(BaseCommand):
                                 await asyncio.sleep(1)
                                 
                             else:
-                                # print("テーブルが見つかりませんでした。")
                                 pass
                         else:
-                                # print("テーブルHTMLが見つかりませんでした。")
                                 pass
                     
-                    # エラー発生、ループから脱出           
+                    # Error occurs, exit the loop           
                     except Exception as e:
                         print(f"An error occurred for race ID {race_id}: {e}")
                         break  
@@ -365,7 +360,7 @@ class Command(BaseCommand):
             logging.info('Pyppeteer task completed successfully')
             
         except Exception as e:
-            logging.error(f'Error during Pyppeteer task: {e}')  # エラーメッセージをログに記録
+            logging.error(f'Error during Pyppeteer task: {e}')  
             raise
         
         return results_df
@@ -373,7 +368,7 @@ class Command(BaseCommand):
     async def add_results_to_db(self, results_df):
             for _, row in results_df.iterrows():
                 try:
-                    # 同期的なデータベース操作を非同期で実行
+                    # Execute synchronous database operations asynchronously
                     await sync_to_async(RaceResults.objects.get_or_create, thread_sensitive=True)(
                         race_horse_id=row['race_horse_id'],
                         defaults={
@@ -409,11 +404,10 @@ class Command(BaseCommand):
                         }
                     )
                 except IntegrityError:
-                    # race_horse_idが既に存在する場合、このレコードをスキップ
+                    # if race_horse_id is already exist, skip the record
                     pass
 
 
-    # これを走らせて上記の関数を呼び込む
     async def main(self):
         
         existing_ids = await self.get_existing_race_ids()
@@ -421,7 +415,7 @@ class Command(BaseCommand):
         await self.add_results_to_db(results_df)
         
         
-    # 非同期処理を同期的に実行
+    # Execute synchronous operations asynchronously
     def handle(self, *args, **options):
         
         asyncio.run(self.main())
