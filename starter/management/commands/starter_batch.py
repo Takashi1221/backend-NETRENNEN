@@ -89,7 +89,7 @@ class Command(BaseCommand):
 
     async def starter(self, urls, raceids):
         starter_dfs = {}
-        for url, raceid in zip(urls[:5], raceids[:5]):
+        for url, raceid in zip(urls, raceids):
             try:
                 browser = await launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-software-rasterizer'], dumpio=True)
                 page = await browser.newPage()
