@@ -1,7 +1,9 @@
 from rest_framework import viewsets
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from django.utils.encoding import smart_str
+from users.authentication import CustomJWTAuthentication
 from datetime import datetime, timedelta, timezone
 from .models import CombinedResults, RaceResults, HorseResults
 from .serializers import CombinedResultsSerializer, RaceResultsSerializer, RaceNumberSerializer, HorseEachResultsSerializer
@@ -28,6 +30,26 @@ class RaceResultsViewSet(viewsets.ModelViewSet):
         race_id = self.request.query_params.get('race_id')
         if race_id is not None:
             queryset = queryset.filter(race_id=race_id)
+
+        return queryset
+    
+    
+class DataAnalysisViewSet(viewsets.ModelViewSet):
+    serializer_class = RaceResultsSerializer
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated] 
+    def get_queryset(self):
+        queryset = RaceResults.objects.all()
+        ort = self.request.query_params.get('ort')
+        distanz = self.request.query_params.get('distanz')
+        
+        if ort:
+            ort = smart_str(ort).replace('\u00A0', ' ')  # 不換スペースを通常のスペースに置換
+        if distanz:
+            distanz = smart_str(distanz).replace('\u00A0', ' ') 
+
+        if ort is not None and distanz is not None:
+            queryset = queryset.filter(ort=ort, distanz=distanz)
 
         return queryset
     
