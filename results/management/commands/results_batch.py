@@ -71,7 +71,6 @@ class Command(BaseCommand):
                 print('First login button clicked.')
                 await page.type('input[name="benutzername"]', 'miolla21')
                 await page.type('input[name="passwort"]', dg_key)
-                await page.screenshot({'path': 'before_click.png'})
                 
                 await page.waitForSelector('.greenButton.loginActionButton', {'visible': True, 'timeout': 5000})
                 await page.click('.greenButton.loginActionButton')
