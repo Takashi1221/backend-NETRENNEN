@@ -12,6 +12,7 @@ import asyncio
 from pyppeteer import launch
 from asgiref.sync import sync_to_async
 from results.models import HorseResults, RaceResults
+from starter.models import HorsePedigree
 import random
 from decouple import config, Csv
 
@@ -20,7 +21,6 @@ from decouple import config, Csv
 os.environ['DEBUG'] = 'puppeteer:*'
 # Load env.
 dg_key = config('DG_KEY')
-print(dg_key)
 # logging setting
 logging.basicConfig(level=logging.DEBUG, filename='/tmp/pyppeteer.log', filemode='w')
 
@@ -364,9 +364,21 @@ class Command(BaseCommand):
             raise
         
         return results_df
+    
+    async def pedigree_merge(self, results_df):
+        # HorsePedigreeからhorse_id, pedigree_1, pedigree_5を取得
+        pedigree_qs = await sync_to_async(list)(HorsePedigree.objects.values('horse_id', 'pedigree_1', 'pedigree_5'))
+        pedigree_df = pd.DataFrame(list(pedigree_qs))
         
-    async def add_results_to_db(self, results_df):
-            for _, row in results_df.iterrows():
+        # sireとdamsireを更新
+        merged_df = pd.merge(results_df, pedigree_df, on="horse_id", how="left")
+        merged_df['sire'] = merged_df['pedigree_1']
+        merged_df['damsire'] = merged_df['pedigree_5']
+        
+        return merged_df
+        
+    async def add_results_to_db(self, merged_df):
+            for _, row in merged_df.iterrows():
                 try:
                     # Execute synchronous database operations asynchronously
                     await sync_to_async(RaceResults.objects.get_or_create, thread_sensitive=True)(
@@ -399,6 +411,8 @@ class Command(BaseCommand):
                             'hit_platz': row['hit_platz'],
                             'pay_zweier': row['pay_zweier'],
                             'pay_dreier': row['pay_dreier'],
+                            'sire': row['pedigree_1'],
+                            'damsire': row['pedigree_5'],
                             'horse_id': row['horse_id'],
                             'race_id': row['race_id'],
                         }
@@ -412,7 +426,9 @@ class Command(BaseCommand):
         
         existing_ids = await self.get_existing_race_ids()
         results_df = await self.scrape(existing_ids)
-        await self.add_results_to_db(results_df)
+        merged_df = await self.pedigree_merge(results_df)
+        
+        await self.add_results_to_db(merged_df)
         
         
     # Execute synchronous operations asynchronously

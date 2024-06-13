@@ -54,6 +54,8 @@ class RaceResults(models.Model):
     hit_platz = models.FloatField(null=True, blank=True)
     pay_zweier = models.CharField(max_length=100, null=True, blank=True)  
     pay_dreier = models.CharField(max_length=100, null=True, blank=True)  
+    sire = models.CharField(max_length=100, null=True, blank=True) 
+    damsire = models.CharField(max_length=100, null=True, blank=True) 
     horse_id = models.CharField(max_length=100)
     race_id = models.CharField(max_length=100)
     
