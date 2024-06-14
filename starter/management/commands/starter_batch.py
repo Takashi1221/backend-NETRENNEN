@@ -1,5 +1,4 @@
 import os
-import logging
 from django.core.management.base import BaseCommand, CommandError
 from django.db.utils import IntegrityError
 from django.conf import settings
@@ -20,13 +19,8 @@ from starter.models import Renntermine, Starter, HorseProfi, HorsePedigree
 from results.models import HorseResults, RaceResults, CombinedResults
 
 
-
-# 環境変数DEBUGを設定
-os.environ['DEBUG'] = 'puppeteer:*'
 # 環境変数の読み込み
 dg_key = config('DG_KEY')
-# ログの設定
-logging.basicConfig(level=logging.DEBUG, filename='/tmp/pyppeteer.log', filemode='w')
 
 
 class Command(BaseCommand):
@@ -82,7 +76,7 @@ class Command(BaseCommand):
                 df = df.rename(columns={"Datum":"date", "RNr.":"number", "Rennort":"ort", "Renntitel":"title", "Start":"start",
                                         "Distanz":"distance", "Kategorie":"kategorie", "Preisgeld":"preise", "Starter":"starter"})
             else:
-                print("テーブルが見つかりませんでした。") # 基本的にこのテーブルはあります
+                print("Renntermine-Table Not Found") # 基本的にこのテーブルはあります
 
         return df
         
@@ -124,6 +118,8 @@ class Command(BaseCommand):
                         df[['Name', 'Equipment']] = df['Name'].apply(extract_equipment)
                         
                         def split_gew_erlaubnise(gew):
+                            if pd.isna(gew) or not gew.strip():
+                                return pd.Series(['', ''])
                             parts = re.split(r'kg', gew)
                             gew_value = parts[0].strip().replace(' ', '')
                             erlaubnise_value = parts[1].strip() if len(parts) > 1 else ''
@@ -137,10 +133,10 @@ class Command(BaseCommand):
                         df["horse_id"] = horse_ids
                         starter_dfs[raceid] = df
                     else:
-                        logger.error("テーブルが見つかりませんでした。") # 基本的にこのテーブルはあります
+                        print("Starter-Table Not Found") # 基本的にこのテーブルはあります
                         
             except Exception as e:
-                logger.error(f"エラーが発生しました: {e}")
+                print(f"エラーが発生しました: {e}")
                 raise  # この例外を再発生させることで処理を中断
             
         starter_df = pd.concat(starter_dfs.values()).reset_index(drop=True)
@@ -168,7 +164,7 @@ class Command(BaseCommand):
             await page.click('#cookieNoticeDeclineCloser')
             await self.wait_randomly(3, 5)
         except Exception as e:
-            logger.error(f"エラーが発生しました: {e}")
+            print(f"Cookie承諾画面でエラーが発生: {e}")
             
         # ログインモーダルを表示させるボタンをクリック
         try:
@@ -185,7 +181,7 @@ class Command(BaseCommand):
             await self.wait_randomly(1, 3)
 
         except Exception as e:
-            logger.error(f"エラーが発生しました: {e}")
+            print(f"ログインモーダルで発生: {e}")
 
         profi_dfs = {}
         results_dfs = {}
@@ -277,7 +273,7 @@ class Command(BaseCommand):
                     results_dfs[horse] = selected_df
                     df_profi["Total_Earnings"] = sum_preisgeld # 戦績から総獲得賞金を作成
                 else:
-                    print("テーブルが見つかりませんでした。")
+                    print("Horse-results-table not found")
                     df_profi["Total_Earnings"] = 0
                 
                 # このタイミングでprofi_dfを格納
