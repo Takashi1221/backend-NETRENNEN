@@ -1,5 +1,4 @@
 import os
-import logging
 from django.core.management.base import BaseCommand, CommandError
 from django.db.utils import IntegrityError
 import pandas as pd
@@ -16,13 +15,8 @@ from starter.models import HorsePedigree
 import random
 from decouple import config, Csv
 
-
-# DEBUG setting
-os.environ['DEBUG'] = 'puppeteer:*'
 # Load env.
 dg_key = config('DG_KEY')
-# logging setting
-logging.basicConfig(level=logging.DEBUG, filename='/tmp/pyppeteer.log', filemode='w')
 
 
 class Command(BaseCommand):
@@ -39,9 +33,17 @@ class Command(BaseCommand):
         existing_ids = await sync_to_async(set)(RaceResults.objects.values_list('race_id', flat=True))
         
         return existing_ids
+    
+    async def get_missing_race_ids(self):
+
+        existing_race_ids = await sync_to_async(set)(RaceResults.objects.values_list('race_id', flat=True))
+        all_horse_race_ids = await sync_to_async(set)(HorseResults.objects.values_list('race_id', flat=True))
+        not_existing_ids = all_horse_race_ids - existing_race_ids
+        
+        return list(not_existing_ids)
 
 
-    async def scrape(self, existing_ids):
+    async def scrape(self, existing_ids, not_existing_ids):
         
         try:
             # Launch the browser
@@ -107,7 +109,7 @@ class Command(BaseCommand):
                                     
                             race_ids.append(race_id)
 
-            unique_races = list(set(race_ids))
+            unique_races = list(set(race_ids + not_existing_ids))
             race_id_list = [race_id for race_id in unique_races if race_id not in existing_ids]
             
             if race_id_list:
@@ -356,10 +358,10 @@ class Command(BaseCommand):
                 
             await page.close()
             await browser.close()
-            logging.info('Pyppeteer task completed successfully')
+            print('Pyppeteer task completed successfully')
             
         except Exception as e:
-            logging.error(f'Error during Pyppeteer task: {e}')  
+            print(f'Error during Pyppeteer task: {e}')  
             raise
         
         return results_df
@@ -424,7 +426,8 @@ class Command(BaseCommand):
     async def main(self):
         
         existing_ids = await self.get_existing_race_ids()
-        results_df = await self.scrape(existing_ids)
+        not_existing_ids = await self.get_missing_race_ids()
+        results_df = await self.scrape(existing_ids, not_existing_ids)
         merged_df = await self.pedigree_merge(results_df)
         
         await self.add_results_to_db(merged_df)
