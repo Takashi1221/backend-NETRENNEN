@@ -25,8 +25,8 @@ class Command(BaseCommand):
         # 現在の時刻を取得
         current_time = datetime.now().time()
 
-        # 現在時刻が午前7時から午後9時の間であるかを確認
-        if time(7, 0) <= current_time <= time(21, 0):
+        # 現在時刻が午前8時から午後9時の間であるかを確認
+        if time(8, 0) <= current_time <= time(21, 0):
             # race_idを使用してスクレイピングする（ここはコードが未定なので省略）
             await self.scrape_races(race_ids)
         else:
@@ -46,12 +46,12 @@ class Command(BaseCommand):
         
         # Cookie承諾画面を処理
         await page.goto('https://www.deutscher-galopp.de')
-        await self.wait_randomly(1, 5)
+        await asyncio.sleep(3)
         
         try:
             await page.waitForSelector('#cookieNoticeDeclineCloser', {'visible': True, 'timeout': 5000})
             await page.click('#cookieNoticeDeclineCloser')
-            await self.wait_randomly(3, 5)
+            await asyncio.sleep(3)
         except Exception as e:
             print('cookie notice not found')
         
