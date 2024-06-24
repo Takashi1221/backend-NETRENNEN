@@ -81,7 +81,7 @@ class Command(BaseCommand):
                     
                     # Save each record to TodayErgebnis model
                     for number, horse_id, quote in zip(number_texts, horse_hrefs, quote_texts[1:]):
-                        await sync_to_async(TodayErgebnis.objects.create)(race_id=race_id, number=number, quote=quote, horse_id=horse_id)
+                        await sync_to_async(TodayErgebnis.objects.create)(race_id=race_id, platz=number, quote=quote, horse_id=horse_id)
 
             else:
                 # Extract horse_id and quote from the 'nennungen' table
