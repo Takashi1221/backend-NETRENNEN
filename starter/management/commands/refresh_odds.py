@@ -79,9 +79,40 @@ class Command(BaseCommand):
                         'spans => spans.map(span => span.innerText)'
                     )
                     
+                    tfoot_text = await page.querySelectorEval(
+                        'table#ergebnis tfoot',
+                        'tfoot => tfoot.innerText'
+                    )
+                    split_text = tfoot_text("ZEIT DES RENNENS:")
+                    if split_text[0]:
+                        payout_text = split_text[0]
+                        siegwette = re.search(r"Siegwette ([\d\.]+,\d+)", payout_text)
+                        platzwette = re.search(r"Platzwette ([\d+,\/\s]+)", payout_text)
+                        zweierwette = re.search(r"Zweierwette ([\d\.]+,\d+)", payout_text)
+                        dreierwette = re.search(r"Dreierwette ([\d\.]+,\d+)", payout_text)
+                        if siegwette:
+                            pay_sieg = siegwette.group(1)
+                        if platzwette:
+                            pay_platz = platzwette.group(1)
+                        else: 
+                            pay_platz = "-"
+                        if zweierwette:
+                            pay_zweier = zweierwette.group(1)
+                        else:
+                            pay_zweier = "-"
+                        if dreierwette:
+                            pay_dreier = dreierwette.group(1)
+                        else:
+                            pay_dreier = "-"
+                    else:
+                        pay_sieg = "-"
+                        pay_platz = "-"
+                        pay_zweier = "-"
+                        pay_dreier = "-"
+                    
                     # Save each record to TodayErgebnis model
                     for number, horse_id, quote in zip(number_texts, horse_hrefs, quote_texts[1:]):
-                        await sync_to_async(TodayErgebnis.objects.create)(race_id=race_id, platz=number, quote=quote, horse_id=horse_id)
+                        await sync_to_async(TodayErgebnis.objects.create)(race_id=race_id, platz=number, quote=quote, horse_id=horse_id, pay_sieg=pay_sieg, pay_platz=pay_platz, pay_zweier=pay_zweier, pay_dreier=pay_dreier)
 
             else:
                 # Extract horse_id and quote from the 'nennungen' table
@@ -96,7 +127,11 @@ class Command(BaseCommand):
                 
                 # Save each record to TodayOdds model
                 for horse_id, quote in zip(horse_hrefs, quote_texts[1:]):
-                    await sync_to_async(TodayOdds.objects.create)(race_id=race_id, quote=quote, horse_id=horse_id)
+                    await sync_to_async(TodayOdds.objects.update_or_create)(
+                        race_id=race_id, 
+                        horse_id=horse_id,
+                        defaults={'quote': quote}
+                    )
 
         await browser.close()
 

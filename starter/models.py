@@ -118,6 +118,10 @@ class TodayErgebnis(models.Model):
     platz = models.CharField(max_length=255)
     quote = models.CharField(max_length=255)
     horse_id = models.CharField(max_length=255)
+    pay_sieg = models.CharField(blank=True, null=True, max_length=255)
+    pay_platz = models.CharField(blank=True, null=True, max_length=255)
+    pay_zweier = models.CharField(blank=True, null=True, max_length=255)
+    pay_dreier = models.CharField(blank=True, null=True, max_length=255)
     
     class Meta:
         verbose_name = "当日レース結果"
