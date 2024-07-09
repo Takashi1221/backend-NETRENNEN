@@ -130,6 +130,12 @@ class Command(BaseCommand):
                         a_tags = soup.select('table#nennungen a')
                         id_regex = re.compile(r'/pferd/(\d+)/')
                         horse_ids = [id_regex.search(a['href']).group(1) for a in a_tags if id_regex.search(a['href'])]
+                        
+                        # 登録馬数がゼロのレースについてハンドリング
+                        if len(horse_ids) != len(df):
+                            print(f"horse_idsの数が一致しないため、レースID {raceid} をスキップします")
+                            continue
+                    
                         df["horse_id"] = horse_ids
                         starter_dfs[raceid] = df
                     else:
