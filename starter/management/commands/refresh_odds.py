@@ -83,7 +83,8 @@ class Command(BaseCommand):
                         'table#ergebnis tfoot',
                         'tfoot => tfoot.innerText'
                     )
-                    split_text = tfoot_text("ZEIT DES RENNENS:")
+                    print(tfoot_text)
+                    split_text = tfoot_text.split("ZEIT DES RENNENS:")
                     if split_text[0]:
                         payout_text = split_text[0]
                         siegwette = re.search(r"Siegwette ([\d\.]+,\d+)", payout_text)
